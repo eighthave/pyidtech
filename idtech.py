@@ -130,7 +130,17 @@ class IDTech():
     def split(self, s):
         '''take string ``s`` and split it into command, reader status, and ISO/IEC 7813 tracks'''
         # command, reader status, track 1 and/or track 2
-        return s.pop(0), s.pop(0), ''.join(s).split('\r') # \r == 0x0d
+        command = s.pop(0)
+        status = s.pop(0)
+        tracks = ''.join(s).split('\r') # \r == 0x0d
+        track1 = None
+        track2 = None
+        for track in tracks:
+            if track.find('^') > -1:
+                track1 = track
+            if track.find('=') > -1:
+                track2 = track
+        return command, status, track1, track2
 
 
     def parsetrack1(self, trackstr):
@@ -219,18 +229,14 @@ def main(argv):
     print 'waiting for input'
     swipestring = reader.read()
 
-    command, status, tracks = reader.split(swipestring)
+    command, status, track1, track2 = reader.split(swipestring)
     print 'command: ' + str(command)
     print '-----------------------------------'
     print 'reader status'
     reader.parseReaderStatus(status)
     print '-----------------------------------'
-
-    for track in tracks:
-        if track.find('^') > -1:
-            reader.parsetrack1(track)
-        if track.find('=') > -1:
-            reader.parsetrack2(track)
+    print reader.parsetrack1(track1)
+    print reader.parsetrack2(track2)
 
     reader.close()
 
