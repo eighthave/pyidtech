@@ -36,7 +36,6 @@ class IDTech():
         endofpacket = False
         while not endofpacket and len(bytes) <= IDTech.MAX_MESSAGE_LEN:
             byte = self.serial.read()
-            print 'byte: ' + str(byte)
             if byte != '':
                 bytes.append(byte)
             if byte == IDTech.ETX: endofpacket = True
@@ -130,72 +129,72 @@ class IDTech():
         lastname, firstname = name.split('/')
         expyear = data[0:2]
         expmonth = data[2:4]
-        print 'validate ' + cardnumber + ' == ' + str(validate_cc(cardnumber))
+        print 'track 1 -------------------------------------------------------'
+        print 'validate ' + cardnumber + ' == ' + str(self.validate(cardnumber))
         print 'cardnumber: ' + str(cardnumber)
         print 'firstname: ' + firstname.title()
         print 'lastname: ' + lastname.title()
         print 'data: ' + str(data)
         print 'month/year: ' + str(expmonth) + '/' + str(expyear)
-        print '---------done------------'
 
     def parsetrack2(self, trackstr):
         trackdata = trackstr[1:len(trackstr)-1] #remove start/end sentinel
         cardnumber, data = trackdata.split('=')
         expyear = data[0:2]
         expmonth = data[2:4]
-        print 'validate ' + cardnumber + ' == ' + str(validate_cc(cardnumber))
+        print 'track 2 -------------------------------------------------------'
+        print 'validate ' + cardnumber + ' == ' + str(self.validate(cardnumber))
         print 'cardnumber: ' + str(cardnumber)
         print 'data: ' + str(data)
         print 'month/year: ' + str(expmonth) + '/' + str(expyear)
-        print '---------done------------'
 
 
-# http://atlee.ca/blog/2008/05/27/validating-credit-card-numbers-in-python/
-def validate_cc(s):
-    """
-    Returns True if the credit card number ``s`` is valid,
-    False otherwise.
- 
-    Returning True doesn't imply that a card with this number has ever been,
-    or ever will be issued.
- 
-    Currently supports Visa, Mastercard, American Express, Discovery
-    and Diners Cards.  
- 
-    >>> validate_cc("4111-1111-1111-1111")
-    True
-    >>> validate_cc("4111 1111 1111 1112")
-    False
-    >>> validate_cc("5105105105105100")
-    True
-    >>> validate_cc(5105105105105100)
-    True
-    """
-    # Strip out any non-digits
-    s = re.sub("[^0-9]", "", str(s))
-    regexps = [
-            "^4\d{15}$",
-            "^5[1-5]\d{14}$",
-            "^3[4,7]\d{13}$",
-            "^3[0,6,8]\d{12}$",
-            "^6011\d{12}$",
-            ]
+    # http://atlee.ca/blog/2008/05/27/validating-credit-card-numbers-in-python/
+    def validate(self, cardnumber):
+        """
+        Returns True if the credit card number ``cardnumber`` is valid,
+        False otherwise.
 
-    if not any(re.match(r, s) for r in regexps):
-        return False
+        Returning True doesn't imply that a card with this number has ever been,
+        or ever will be issued.
 
-    chksum = 0
-    x = len(s) % 2
-    for i, c in enumerate(s):
-        j = int(c)
-        if i % 2 == x:
-            k = j*2
-            if k >= 10:
-                k -= 9
-            chksum += k
-        else:
-            chksum += j
-    return chksum % 10 == 0
+        Currently supports Visa, Mastercard, American Express, Discovery
+        and Diners Cards.  
+
+        >>> validate_cc("4111-1111-1111-1111")
+        True
+        >>> validate_cc("4111 1111 1111 1112")
+        False
+        >>> validate_cc("5105105105105100")
+        True
+        >>> validate_cc(5105105105105100)
+        True
+        """
+        # Strip out any non-digits
+        s = re.sub("[^0-9]", "", str(cardnumber))
+        regexps = [
+                "^4\d{15}$",
+                "^5[1-5]\d{14}$",
+                "^3[4,7]\d{13}$",
+                "^3[0,6,8]\d{12}$",
+                "^6011\d{12}$",
+                ]
+
+        if not any(re.match(r, s) for r in regexps):
+            return False
+
+        chksum = 0
+        x = len(s) % 2
+        for i, c in enumerate(s):
+            j = int(c)
+            if i % 2 == x:
+                k = j*2
+                if k >= 10:
+                    k -= 9
+                chksum += k
+            else:
+                chksum += j
+        return chksum % 10 == 0
    
 
 #------------------------------------------------------------------------------#
@@ -203,28 +202,23 @@ def validate_cc(s):
 def main(argv):
     reader = IDTech('/dev/tty.usbmodem1a21')
 
-    while 1: 
-        print '========================================================================'
-        print 'waiting for input'
-        bytes = reader.read()
-        if bytes == 'None':
-            continue
-        else:
-            print 'bytes length: ' + str(len(bytes))
+    print '========================================================================'
+    print 'waiting for input'
+    bytes = reader.read()
 
-        command = ord(bytes.pop(0))
-        print 'command: ' + hex(command)
-        print '-----------------------------------'
-        reader.parseReaderStatus(ord(bytes.pop(0)))
-        print '-----------------------------------'
+    command = ord(bytes.pop(0))
+    print 'command: ' + hex(command)
+    print '-----------------------------------'
+    reader.parseReaderStatus(ord(bytes.pop(0)))
+    print '-----------------------------------'
 
-        tracks = []
-        tracks = ''.join(bytes).split('\r') # \r == 0x0d
-        for track in tracks:
-            if track.find('^') > -1:
-                reader.parsetrack1(track)
-            if track.find('=') > -1:
-                reader.parsetrack2(track)
+    tracks = []
+    tracks = ''.join(bytes).split('\r') # \r == 0x0d
+    for track in tracks:
+        if track.find('^') > -1:
+            reader.parsetrack1(track)
+        if track.find('=') > -1:
+            reader.parsetrack2(track)
 
     reader.close()
 
