@@ -20,9 +20,11 @@ class IDTech():
         self.serial = serial.Serial(device, timeout=timeout)
         self.serial.flushInput()
 
+
     def close(self):
         '''close the connection to the credit card reader'''
         self.serial.close()
+
 
     # LRC = Longitudinal Redundancy Check
     def _compileLRC(self, list):
@@ -30,6 +32,7 @@ class IDTech():
         for byte in list:
             lrc ^= ord(byte)
         return lrc
+
 
     def read(self):
         bytes = []
@@ -39,7 +42,6 @@ class IDTech():
             if byte != '':
                 bytes.append(byte)
             if byte == IDTech.ETX: endofpacket = True
-        print('packet: ' + str(bytes))
 # split off into def _validate
         if len(bytes) > 0:
             if bytes.pop(-1) != IDTech.ETX:
@@ -64,7 +66,9 @@ class IDTech():
                 print bytes
                 return bytes
 
-    def parseReaderStatus(self, statusbyte):
+
+    def parseReaderStatus(self, status):
+        statusbyte = ord(status)
         if statusbyte & 1:
             print '0: No data in a reader'
         else:
@@ -94,7 +98,9 @@ class IDTech():
         else:
             print '6: All other conditions'
 
-    def parseCardDataStatus(self, statusbyte):
+
+    def parseCardDataStatus(self, status):
+        statusbyte = ord(status)
         if statusbyte & 1:
             print 'Track 1 decode success'
         else:
@@ -119,6 +125,13 @@ class IDTech():
             print 'Track 3 data exists'
         else:
             print 'No Track 3 data'
+
+
+    def split(self, s):
+        '''take string ``s`` and split it into command, reader status, and ISO/IEC 7813 tracks'''
+        # command, reader status, track 1 and/or track 2
+        return s.pop(0), s.pop(0), ''.join(s).split('\r') # \r == 0x0d
+
 
     def parsetrack1(self, trackstr):
         if trackstr[1] != 'B':
@@ -204,16 +217,15 @@ def main(argv):
 
     print '========================================================================'
     print 'waiting for input'
-    bytes = reader.read()
+    swipestring = reader.read()
 
-    command = ord(bytes.pop(0))
-    print 'command: ' + hex(command)
+    command, status, tracks = reader.split(swipestring)
+    print 'command: ' + str(command)
     print '-----------------------------------'
-    reader.parseReaderStatus(ord(bytes.pop(0)))
+    print 'reader status'
+    reader.parseReaderStatus(status)
     print '-----------------------------------'
 
-    tracks = []
-    tracks = ''.join(bytes).split('\r') # \r == 0x0d
     for track in tracks:
         if track.find('^') > -1:
             reader.parsetrack1(track)
