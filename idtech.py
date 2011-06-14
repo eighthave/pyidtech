@@ -42,23 +42,19 @@ class IDTech():
             if byte != '':
                 bytes.append(byte)
             if byte == IDTech.ETX: endofpacket = True
-# split off into def _validate
+        # TODO figuure out a good exception
         if len(bytes) > 0:
             if bytes.pop(-1) != IDTech.ETX:
-                print 'Exception: Received incomplete message (no EOT/ETX)'
-                return
+                raise Exception('Received incomplete message (no EOT/ETX)')
             lrc = ord(bytes.pop(-1))
             if self._compileLRC(bytes) != lrc:
-                print 'Exception: Received corrupt message (wrong LRC)'
-                return
+                raise Exception('Received corrupt message (wrong LRC)')
             header = bytes.pop(0)
             commandsize = ord(bytes.pop(0)) + ord(bytes.pop(0))
             if len(bytes) != commandsize:
-                print 'Exception: Received wrong amount of bytes (received != commandsize)'
-                return
+                raise Exception('Received wrong amount of bytes (received != commandsize)')
             if header == IDTech.NACK:
-                print "Exception: NACK'ed message"
-                return
+                raise Exception('NACK on message')
             if header == IDTech.ACK:
                 print 'header: ' + str(header)
                 print 'commandsize: ' + str(commandsize)
@@ -144,9 +140,10 @@ class IDTech():
 
 
     def parsetrack1(self, trackstr):
+        if not trackstr:
+            raise Exception('blank track 1 data')
         if trackstr[1] != 'B':
-            print 'Exception: wrong track 1 format (not B)'
-            return
+            raise Exception('wrong track 1 format (not B)')
         trackdata = trackstr[2:len(trackstr)-1] #remove start/end sentinel
         cardnumber, name, data = trackdata.split('^')
         lastname, firstname = name.split('/')
