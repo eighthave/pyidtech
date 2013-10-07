@@ -1,0 +1,4 @@
+build/
+dist/
+pyidtech.egg-info/
+*.pyc
